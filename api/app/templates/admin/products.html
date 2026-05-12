@@ -1,0 +1,226 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="page-title">
+    产品管理
+    <button class="btn btn-primary" onclick="openProductModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        添加产品
+    </button>
+</div>
+
+<div class="filter-bar">
+    <select class="form-control" style="max-width:200px" id="filterCategory" onchange="filterProducts()">
+        <option value="">全部分类</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}">{{ cat.name_zh }}</option>
+        {% endfor %}
+    </select>
+    <input type="text" class="search-input" placeholder="搜索产品..." id="searchInput" oninput="filterProducts()">
+</div>
+
+<div class="card">
+    <table class="table" id="productsTable">
+        <thead>
+            <tr>
+                <th style="width:60px">图片</th>
+                <th>名称</th>
+                <th>分类</th>
+                <th>规格</th>
+                <th>售价</th>
+                <th>成本</th>
+                <th>库存</th>
+                <th>状态</th>
+                <th style="width:120px">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in products %}
+            <tr class="product-row" data-cat="{{ p.category_id if p.category_id else '' }}">
+                <td>
+                    {% if p.image_url %}
+                    <img src="{{ p.image_url }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px">
+                    {% else %}
+                    <div style="width:44px;height:44px;background:var(--surface);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-dim)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6 2 4 8 4 12c0 4 2 8 8 10 6-2 8-6 8-10 0-4-2-10-8-10z"/><path d="M12 22V10"/><path d="M8 6c2 2 6 2 8 0"/></svg>
+                    </div>
+                    {% endif %}
+                </td>
+                <td><strong>{{ p.name_zh }}</strong><br><small class="text-muted">{{ p.name_en }}</small></td>
+                <td>{{ p.category.name_zh if p.category else '-' }}</td>
+                <td class="text-muted" style="font-size:0.82rem">{{ p.spec or '-' }}</td>
+                <td class="font-mono" style="color:var(--gold)">¥{{ "%.0f"|format(p.price) }}</td>
+                <td class="font-mono text-muted">¥{{ "%.0f"|format(p.cost_price) }}</td>
+                <td>
+                    <span class="{% if p.is_low_stock or p.is_out_of_stock %}text-danger{% endif %}">
+                        {{ p.stock }}
+                    </span>
+                </td>
+                <td>
+                    {% if p.status == 'active' %}
+                    <span class="badge badge-success">上架</span>
+                    {% else %}
+                    <span class="badge badge-error">下架</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn-icon" onclick="editProduct({{ p.id }})" title="编辑">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn-icon" onclick="toggleProduct({{ p.id }}, '{{ p.status }}')" title="{{ '上架' if p.status != 'active' else '下架' }}">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            {% if p.status == 'active' %}
+                            <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                            {% else %}
+                            <polyline points="20 6 9 17 4 12"/>
+                            {% endif %}
+                        </svg>
+                    </button>
+                    <button class="btn-icon text-danger" onclick="deleteProduct({{ p.id }})" title="删除">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                </td>
+            </tr>
+        {% endfor %}
+        {% if not products %}
+            <tr><td colspan="9" class="text-muted" style="text-align:center;padding:40px">暂无产品，点击右上角添加</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Product Modal -->
+<div class="modal" id="productModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <span id="productModalTitle">添加产品</span>
+            <button class="modal-close" onclick="closeProductModal()">&times;</button>
+        </div>
+        <form id="productForm" onsubmit="saveProduct(event)">
+            <input type="hidden" id="productId" name="id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">名称 (中文) *</label>
+                    <input type="text" class="form-control" id="name_zh" name="name_zh" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">名称 (English)</label>
+                    <input type="text" class="form-control" id="name_en" name="name_en">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">名称 (Русский)</label>
+                    <input type="text" class="form-control" id="name_ru" name="name_ru">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select class="form-control" id="product_category_id" name="category_id">
+                        <option value="">未分类</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name_zh }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">规格</label>
+                    <input type="text" class="form-control" id="product_spec" name="spec" placeholder="如: 52环径 × 6.5英寸">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">图片 URL</label>
+                    <input type="url" class="form-control" id="product_image_url" name="image_url" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">售价 (¥) *</label>
+                    <input type="number" class="form-control" id="product_price" name="price" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">成本价 (¥)</label>
+                    <input type="number" class="form-control" id="product_cost_price" name="cost_price" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">初始库存</label>
+                    <input type="number" class="form-control" id="product_stock" name="stock" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">库存预警线</label>
+                    <input type="number" class="form-control" id="product_stock_alert" name="stock_alert" min="0" value="3">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeProductModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const ALL_PRODUCTS = {{ products | tojson }};
+const ALL_CATEGORIES = {{ categories | tojson }};
+
+function filterProducts() {
+    const cat = document.getElementById('filterCategory').value;
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.product-row').forEach(row => {
+        const matchCat = !cat || row.dataset.cat == cat;
+        const text = row.textContent.toLowerCase();
+        row.style.display = matchCat && (!q || text.includes(q)) ? '' : 'none';
+    });
+}
+
+function openProductModal(id) {
+    document.getElementById('productId').value = id || '';
+    document.getElementById('productModalTitle').textContent = id ? '编辑产品' : '添加产品';
+    if (!id) document.getElementById('productForm').reset();
+    document.querySelectorAll('#productForm input, #productForm select').forEach(el => {
+        if (el.id.startsWith('product_')) el.value = '';
+    });
+    if (id) {
+        const p = ALL_PRODUCTS.find(x => x.id === id);
+        if (p) {
+            Object.keys(p).forEach(k => {
+                const el = document.getElementById('product_' + k);
+                if (el) el.value = p[k] ?? '';
+            });
+        }
+    }
+    document.getElementById('productModal').classList.add('open');
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.remove('open');
+}
+
+function editProduct(id) { openProductModal(id); }
+
+async function saveProduct(e) {
+    e.preventDefault();
+    const id = document.getElementById('productId').value;
+    const data = { name_zh: f('name_zh'), name_en: f('name_en'), name_ru: f('name_ru'),
+        category_id: f('product_category_id') || null, spec: f('product_spec'),
+        image_url: f('product_image_url'), price: parseFloat(f('product_price')),
+        cost_price: parseFloat(f('product_cost_price')) || 0,
+        stock: parseInt(f('product_stock')) || 0, stock_alert: parseInt(f('product_stock_alert')) || 3 };
+    if (id) data.id = parseInt(id);
+    const r = await fetch('/admin/products/save', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(data) });
+    const result = await r.json();
+    if (result.success) { closeProductModal(); location.reload(); }
+    else alert(result.error || '保存失败');
+}
+
+async function toggleProduct(id, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    await fetch('/admin/products/save', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, status: newStatus }) });
+    location.reload();
+}
+
+async function deleteProduct(id) {
+    if (!confirm('确认删除此产品？')) return;
+    await fetch('/admin/products/' + id, { method:'DELETE' });
+    location.reload();
+}
+
+function f(id) { return document.getElementById(id).value; }
+</script>
+{% endblock %}

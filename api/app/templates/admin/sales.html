@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% block title %}Sales{% endblock %}
+{% block content %}
+<div class="page-title">销售统计</div>
+
+<div class="filter-bar" style="margin-bottom:20px">
+    <select class="form-control" id="dateRange" onchange="loadStats()">
+        <option value="7">最近 7 天</option>
+        <option value="30" selected>最近 30 天</option>
+        <option value="90">最近 90 天</option>
+    </select>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">总收入</div>
+        <div class="metric-value gold" id="totalRevenue">¥0</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">总利润</div>
+        <div class="metric-value" style="color:var(--success)" id="totalProfit">¥0</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">订单数</div>
+        <div class="metric-value" id="totalOrders">0</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">平均客单价</div>
+        <div class="metric-value" id="avgOrder">¥0</div>
+    </div>
+</div>
+
+<!-- Daily Chart -->
+<div class="card" style="margin-top:20px">
+    <div class="card-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        每日营收趋势
+    </div>
+    <div style="padding:20px;overflow-x:auto">
+        <div id="chartBars" style="display:flex;align-items:flex-end;gap:4px;height:120px;min-width:600px"></div>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card" style="margin-top:20px">
+    <div class="card-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        订单明细
+    </div>
+    <table class="table">
+        <thead>
+            <tr><th>订单号</th><th>金额</th><th>利润</th><th>支付方式</th><th>状态</th><th>时间</th></tr>
+        </thead>
+        <tbody id="ordersBody">
+            {% for o in orders %}
+            <tr>
+                <td class="font-mono">{{ o.id }}</td>
+                <td>¥{{ "%.2f"|format(o.total) }}</td>
+                <td>¥{{ "%.2f"|format(o.profit) }}</td>
+                <td>{{ {'cash':'现金','wechat':'微信','alipay':'支付宝','card':'刷卡'}.get(o.payment_method, '-') }}</td>
+                <td>
+                    {% if o.payment_status == 'paid' %}<span class="badge badge-success">已支付</span>
+                    {% elif o.payment_status == 'pending' %}<span class="badge badge-warning">待支付</span>
+                    {% else %}<span class="badge badge-error">已取消</span>{% endif %}
+                </td>
+                <td>{{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+            {% if not orders %}
+            <tr><td colspan="6" class="text-muted" style="text-align:center;padding:30px">暂无订单数据</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+const DAYS = {{ days | tojson }};
+const ORDERS_DATA = {{ orders | tojson }};
+
+function getDailyData() {
+    const days = parseInt(document.getElementById('dateRange').value);
+    const now = new Date();
+    const result = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now); d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const dayOrders = ORDERS_DATA.filter(o => o.created_at && o.created_at.slice(0,10) === key && o.payment_status === 'paid');
+        result.push({
+            label: d.toLocaleDateString('zh', {month:'numeric', day:'numeric'}),
+            revenue: dayOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0),
+            profit: dayOrders.reduce((s, o) => s + parseFloat(o.profit || 0), 0),
+            count: dayOrders.length
+        });
+    }
+    return result;
+}
+
+function loadStats() {
+    const data = getDailyData();
+    const totalRev = data.reduce((s, d) => s + d.revenue, 0);
+    const totalProfit = data.reduce((s, d) => s + d.profit, 0);
+    const totalCount = data.reduce((s, d) => s + d.count, 0);
+    document.getElementById('totalRevenue').textContent = '¥' + totalRev.toFixed(2);
+    document.getElementById('totalProfit').textContent = '¥' + totalProfit.toFixed(2);
+    document.getElementById('totalOrders').textContent = totalCount;
+    document.getElementById('avgOrder').textContent = totalCount > 0 ? '¥' + (totalRev / totalCount).toFixed(2) : '¥0';
+
+    const maxRev = Math.max(...data.map(d => d.revenue), 1);
+    document.getElementById('chartBars').innerHTML = data.map(d => `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="font-size:0.65rem;color:var(--text-muted)">¥${d.revenue.toFixed(0)}</div>
+            <div style="width:100%;background:linear-gradient(to top,var(--gold),var(--gold-dim));border-radius:3px;height:${Math.max((d.revenue/maxRev)*100, 2)}px;min-height:2px"></div>
+            <div style="font-size:0.6rem;color:var(--text-dim)">${d.label}</div>
+        </div>
+    `).join('');
+}
+
+loadStats();
+</script>
+{% endblock %}

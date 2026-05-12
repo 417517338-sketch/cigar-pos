@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% block title %}Sales{% endblock %}
+{% block content %}
+<div class="page-title">
+    Sales Report
+    <a href="{{ url_for('admin.sales') }}?days={{ days == 30 and 7 or days == 7 and 30 or 30 }}" class="btn btn-ghost">
+        {{ days == 30 and 'Last 7 days' or 'Last 30 days' }}
+    </a>
+</div>
+
+<div class="metrics-grid mb-24">
+    <div class="metric-card">
+        <div class="metric-label">Total Sales ({{ days }}d)</div>
+        <div class="metric-value gold">
+            ¥{{ "%.2f"|format(orders|sum(attribute='total')|default(0)) }}
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Gross Profit</div>
+        <div class="metric-value" style="color:var(--success)">
+            ¥{{ "%.2f"|format(orders|sum(attribute='profit')|default(0)) }}
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Orders</div>
+        <div class="metric-value">{{ orders|length }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Avg Order</div>
+        <div class="metric-value">
+            ¥{{ "%.2f"|format((orders|sum(attribute='total')|default(0)) / (orders|length or 1)) }}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr><th>Order No</th><th>Items</th><th>Subtotal</th><th>Discount</th><th>Total</th><th>Cost</th><th>Profit</th><th>Payment</th><th>Status</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td class="font-mono" style="font-size:0.8rem">{{ order.order_no }}</td>
+                <td>{{ order.items|length }} items</td>
+                <td class="font-mono">¥{{ "%.2f"|format(order.subtotal) }}</td>
+                <td class="font-mono" style="color:var(--success)">-¥{{ "%.2f"|format(order.discount_amount) }}</td>
+                <td class="font-mono text-gold">¥{{ "%.2f"|format(order.total) }}</td>
+                <td class="font-mono text-muted">¥{{ "%.2f"|format(order.cost_total) }}</td>
+                <td class="font-mono" style="color:var(--success)">¥{{ "%.2f"|format(order.profit) }}</td>
+                <td>{{ order.payment_method or '-' }}</td>
+                <td>
+                    {% if order.payment_status == 'paid' %}
+                    <span class="badge badge-success">Paid</span>
+                    {% elif order.payment_status == 'pending' %}
+                    <span class="badge badge-warning">Pending</span>
+                    {% else %}
+                    <span class="badge badge-error">Refunded</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" style="font-size:0.8rem">{{ order.paid_at.strftime('%Y-%m-%d %H:%M') if order.paid_at else order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="10" class="text-center text-muted" style="padding:48px">No orders in this period</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

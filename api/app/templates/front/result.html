@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('pay') }} — Cigar Lounge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/front.css') }}">
+    <style>
+        .pay-page { max-width: 480px; margin: 0 auto; padding: 32px 24px; text-align: center; }
+        .pay-amount { font-family: 'JetBrains Mono', monospace; font-size: 3rem; color: var(--gold); font-weight: 600; margin: 24px 0; }
+        .pay-order-no { color: var(--text-muted); margin-bottom: 32px; }
+        .qr-container { background: white; border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; }
+        .qr-container canvas { display: block; margin: 0 auto; }
+        .pay-hint { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
+        .pay-countdown { font-family: 'JetBrains Mono', monospace; color: var(--warning); margin-bottom: 24px; }
+        .pay-actions { display: flex; flex-direction: column; gap: 12px; }
+        /* Success animation */
+        @keyframes successPulse { 0% { box-shadow: 0 0 0 0 rgba(201,168,76,0.6); } 70% { box-shadow: 0 0 0 20px rgba(201,168,76,0); } 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); } }
+        .success-state { animation: successPulse 1s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="pay-page">
+        <h1 style="font-family:'Playfair Display',serif; color:var(--gold)">{{ t('scan_to_pay') }}</h1>
+        <div class="pay-amount">¥{{ "%.2f"|format(order.total) }}</div>
+        <div class="pay-order-no">{{ t('order_no') }}: {{ order.order_no }}</div>
+
+        <div class="qr-container" id="qrContainer">
+            <p style="color:#333; font-size:0.9rem; margin-bottom:12px;">[Payment QR Code]</p>
+            <div style="width:200px;height:200px;background:#f5f5f5;margin:0 auto;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.8rem;">
+                <!-- Camera preview or QR code would appear here -->
+                Simulated QR
+            </div>
+        </div>
+
+        <div class="pay-countdown" id="countdown">Auto-refresh in <span id="timer">30</span>s</div>
+        <div class="pay-hint" id="payHint">Please scan with {{ order.payment_method == 'wechat' and 'WeChat' or 'Alipay' }} app</div>
+
+        <div class="pay-actions">
+            <button class="btn btn-primary" style="width:100%;padding:16px" onclick="simulatePaid()">Simulate Paid (Dev)</button>
+            <button class="btn btn-ghost" onclick="location.href='/'">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+    const orderId = {{ order.id }};
+    let timer = 30;
+    const interval = setInterval(() => {
+        timer--;
+        document.getElementById('timer').textContent = timer;
+        if (timer <= 0) {
+            checkPayment();
+            timer = 30;
+        }
+    }, 1000);
+
+    function checkPayment() {
+        fetch(`/order/${orderId}/status`).then(r => r.json()).then(data => {
+            if (data.status === 'paid') {
+                clearInterval(interval);
+                showSuccess();
+            }
+        });
+    }
+
+    function simulatePaid() {
+        fetch(`/order/${orderId}/pay`, {method: 'POST'}).then(r => r.json()).then(data => {
+            if (data.success) showSuccess();
+        });
+    }
+
+    function showSuccess() {
+        clearInterval(interval);
+        document.querySelector('.pay-page').innerHTML = `
+            <div class="success-state" style="padding:48px 0">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom:24px">
+                    <circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/>
+                </svg>
+                <h2 style="font-family:'Playfair Display',serif;color:var(--success);font-size:1.75rem;margin-bottom:16px">{{ t('payment_success') }}</h2>
+                <p style="color:var(--text-muted);margin-bottom:32px">{{ t('order_no') }}: ${'{{ order.order_no }}'}</p>
+                <button class="btn btn-primary" onclick="location.href='/'">Back to Home</button>
+            </div>
+        `;
+    }
+    </script>
+</body>
+</html>

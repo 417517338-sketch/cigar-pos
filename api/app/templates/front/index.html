@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ shop_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/front.css') }}">
+</head>
+<body>
+
+<div class="app-shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2C6 2 4 8 4 12c0 4 2 8 8 10 6-2 8-6 8-10 0-4-2-10-8-10z"/>
+                    <path d="M12 22V10"/><path d="M8 6c2 2 6 2 8 0"/>
+                </svg>
+            </div>
+            <div class="sidebar-brand">
+                {{ shop_name }}
+                <small>Private Lounge</small>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="cat-label">Category</div>
+            <button class="cat-btn active" data-cat="" onclick="setCategory(this, '')">
+                <div class="cat-icon">☰</div>
+                <span>{{ {'zh':'全部','en':'All','ru':'Все'}[lang] }}</span>
+                <span class="cat-count" id="count-all">{{ products|length }}</span>
+            </button>
+            {% for cat in categories %}
+            <button class="cat-btn" data-cat="{{ cat.id }}" onclick="setCategory(this, {{ cat.id }})">
+                <div class="cat-icon">{{ loop.index }}</div>
+                <span>{{ cat.get_name(lang) }}</span>
+                <span class="cat-count" id="count-{{ cat.id }}">0</span>
+            </button>
+            {% endfor %}
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-content">
+        <div class="topbar">
+            <div class="topbar-title">{{ {'zh':'精选菜单','en':'Curated Menu','ru':'Меню'}[lang] }}</div>
+            <div class="lang-selector">
+                <button class="lang-btn" onclick="toggleLang()">
+                    {{ {'zh':'中文','en':'EN','ru':'RU'}[lang] }}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="lang-menu" id="langMenu">
+                    <button onclick="setLang('zh')">中文</button>
+                    <button onclick="setLang('en')">English</button>
+                    <button onclick="setLang('ru')">Русский</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="products-area" id="productsArea">
+            <div class="products-grid" id="productsGrid">
+                {% for p in products %}
+                <div class="product-card"
+                     data-cat="{{ p.category_id }}"
+                     data-id="{{ p.id }}"
+                     onclick="handleCardClick({{ p.id }})">
+                    <div class="product-image" style="position:relative">
+                        {% if p.image_url %}
+                        <img src="{{ p.image_url }}" alt="{{ p.get_name(lang) }}" loading="lazy">
+                        {% else %}
+                        <div class="product-image-placeholder">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M12 2C6 2 4 8 4 12c0 4 2 8 8 10 6-2 8-6 8-10 0-4-2-10-8-10z"/>
+                                <path d="M12 22V10"/><path d="M8 6c2 2 6 2 8 0"/>
+                            </svg>
+                        </div>
+                        {% endif %}
+                        {% if p.is_out_of_stock %}
+                        <div class="product-overlay out-of-stock">{{ {'zh':'已售罄','en':'Sold Out','ru':'Нет в наличии'}[lang] }}</div>
+                        {% elif p.is_low_stock %}
+                        <div class="product-overlay low-stock">{{ {'zh':'仅剩','en':'Low Stock','ru':'Осталось'}[lang] }} {{ p.stock }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <div class="product-name">{{ p.get_name(lang) }}</div>
+                        {% if p.spec %}<div class="product-spec">{{ p.spec }}</div>{% endif %}
+                        <div class="product-bottom">
+                            <div class="product-price">¥{{ "%.0f"|format(p.price) }}</div>
+                            {% if p.is_out_of_stock %}
+                            <span class="unavailable-text">{{ {'zh':'缺货','en':'N/A','ru':'Нет'}[lang] }}</span>
+                            {% else %}
+                            <div class="qty-stepper">
+                                <button class="qty-btn minus" id="minus-{{ p.id }}"
+                                    onclick="event.stopPropagation(); updateQty({{ p.id }}, -1)"
+                                    disabled>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+                                </button>
+                                <span class="qty-num" id="qty-{{ p.id }}">0</span>
+                                <button class="qty-btn plus" id="plus-{{ p.id }}"
+                                    onclick="event.stopPropagation(); updateQty({{ p.id }}, 1)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cart Bar -->
+<div class="cart-bar">
+    <div class="cart-bar-inner">
+        <div class="cart-summary" id="cartSummary" onclick="goCheckout()">
+            <div class="cart-items-count">
+                <span class="cart-icon-wrap">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+                    </svg>
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </span>
+                <span style="font-size:0.85rem;font-weight:600;color:var(--text)">{{ {'zh':'购物车','en':'Cart','ru':'Корзина'}[lang] }}</span>
+            </div>
+        </div>
+        <div class="cart-total-label" id="cartTotalLabel" style="display:none">
+            {{ {'zh':'合计','en':'Total','ru':'Итого'}[lang] }}
+        </div>
+        <div class="cart-total" id="cartTotal" style="display:none">¥0</div>
+        <button class="checkout-btn" id="checkoutBtn" disabled onclick="goCheckout()">
+            {{ {'zh':'去结算','en':'Checkout','ru':'Оплатить'}[lang] }}
+        </button>
+    </div>
+</div>
+
+<script>
+// ─── State ───
+const INITIAL_QTY = {{ cart | tojson }};
+let cart = Object.assign({}, INITIAL_QTY);
+let activeCategory = '';
+let totalAmount = 0;
+
+const LANG_LABELS = { 'zh':'中文','en':'EN','ru':'RU' };
+
+// ─── Init ───
+function init() {
+    // Sync cart badge + steppers
+    let totalItems = 0;
+    for (const [pid, item] of Object.entries(cart)) {
+        totalItems += item.qty;
+        syncStepper(parseInt(pid), item.qty);
+    }
+    updateCartBar(totalItems);
+    updateCatCounts();
+}
+
+function updateCatCounts() {
+    {% for cat in categories %}
+    document.getElementById('count-{{ cat.id }}').textContent =
+        document.querySelectorAll('.product-card[data-cat="{{ cat.id }}"]').length;
+    {% endfor %}
+}
+
+// ─── Category ───
+function setCategory(btn, catId) {
+    activeCategory = catId;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.product-card').forEach(card => {
+        card.style.display = (!catId || card.dataset.cat == catId) ? '' : 'none';
+    });
+}
+
+// ─── Quantity ───
+function updateQty(productId, delta) {
+    const pid = String(productId);
+    let qty = (cart[pid] ? cart[pid].qty : 0) + delta;
+    if (qty <= 0) {
+        delete cart[pid];
+        qty = 0;
+    } else {
+        cart[pid] = { qty: qty };
+    }
+    syncStepper(productId, qty);
+
+    // Update cart bar
+    let totalItems = 0;
+    for (const [, item] of Object.entries(cart)) totalItems += item.qty;
+    updateCartBar(totalItems);
+
+    // Save to server
+    fetch('/cart/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, quantity: qty })
+    }).then(r => r.json()).then(data => {
+        document.getElementById('cartBadge').textContent = data.cart_count;
+    });
+}
+
+function syncStepper(productId, qty) {
+    const numEl = document.getElementById('qty-' + productId);
+    const minusEl = document.getElementById('minus-' + productId);
+    if (numEl) numEl.textContent = qty;
+    if (minusEl) minusEl.disabled = qty === 0;
+}
+
+function updateCartBar(totalItems) {
+    const badge = document.getElementById('cartBadge');
+    const totalLabel = document.getElementById('cartTotalLabel');
+    const totalEl = document.getElementById('cartTotal');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+
+    badge.textContent = totalItems;
+    checkoutBtn.disabled = totalItems === 0;
+
+    if (totalItems > 0) {
+        totalLabel.style.display = '';
+        totalEl.style.display = '';
+    } else {
+        totalLabel.style.display = 'none';
+        totalEl.style.display = 'none';
+    }
+}
+
+// ─── Card click (quick add if qty=0) ───
+function handleCardClick(productId) {
+    const pid = String(productId);
+    const currentQty = cart[pid] ? cart[pid].qty : 0;
+    if (currentQty === 0) {
+        updateQty(productId, 1);
+    }
+}
+
+// ─── Lang ───
+function toggleLang() {
+    document.getElementById('langMenu').classList.toggle('open');
+}
+
+function setLang(lang) {
+    fetch('/set-lang/' + lang).then(() => location.reload());
+}
+
+// ─── Checkout ───
+function goCheckout() {
+    const totalItems = parseInt(document.getElementById('cartBadge').textContent);
+    if (totalItems === 0) return;
+    window.location.href = '/checkout';
+}
+
+// ─── Event listeners ───
+document.addEventListener('click', e => {
+    if (!e.target.closest('.lang-selector')) {
+        document.getElementById('langMenu').classList.remove('open');
+    }
+});
+
+init();
+</script>
+</body>
+</html>

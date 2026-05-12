@@ -1,0 +1,111 @@
+{% extends "admin/base.html" %}
+{% block title %}Stock{% endblock %}
+{% block content %}
+<div class="page-title">Stock Management</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr><th>Product</th><th>Category</th><th>Current Stock</th><th>Alert Threshold</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td><strong>{{ p.name_zh }}</strong></td>
+                <td>{{ p.category.name_zh if p.category else '-' }}</td>
+                <td>
+                    <span class="font-mono" style="{{ 'color:var(--error)' if p.is_out_of_stock else 'color:var(--warning)' if p.is_low_stock else '' }}">
+                        {{ p.stock }}
+                    </span>
+                </td>
+                <td class="text-muted">{{ p.stock_alert }}</td>
+                <td>
+                    {% if p.is_out_of_stock %}
+                    <span class="badge badge-error">Out of Stock</span>
+                    {% elif p.is_low_stock %}
+                    <span class="badge badge-warning">Low Stock</span>
+                    {% else %}
+                    <span class="badge badge-success">In Stock</span>
+                    {% endif %}
+                </td>
+                <td class="flex gap-8">
+                    <button class="btn btn-ghost btn-sm" onclick="stockIn({{ p.id }}, '{{ p.name_zh }}')">+ In</button>
+                    <button class="btn btn-ghost btn-sm" onclick="stockOut({{ p.id }}, '{{ p.name_zh }}', {{ p.stock }})">- Out</button>
+                    <button class="btn btn-ghost btn-sm" onclick="stockAdjust({{ p.id }}, '{{ p.name_zh }}', {{ p.stock }})">Set</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal-overlay" id="stockModal" style="display:none">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="stockModalTitle">Adjust Stock</h3>
+            <button class="modal-close" onclick="closeStockModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="stockForm">
+            <input type="hidden" id="stockProductId" name="product_id">
+            <input type="hidden" id="stockType" name="type" value="adjust">
+            <div class="form-group">
+                <label class="form-label">Product</label>
+                <div id="stockProductName" style="color:var(--text);font-weight:500"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Quantity</label>
+                <input type="number" class="form-control" id="stockQty" name="quantity" min="0" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Note</label>
+                <input type="text" class="form-control" id="stockNote" name="note" placeholder="Optional">
+            </div>
+            <div class="flex gap-8" style="margin-top:24px">
+                <button type="submit" class="btn btn-primary" style="flex:1">Confirm</button>
+                <button type="button" class="btn btn-ghost" onclick="closeStockModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function stockIn(id, name) {
+    document.getElementById('stockModalTitle').textContent = 'Stock In';
+    document.getElementById('stockType').value = 'in';
+    document.getElementById('stockProductId').value = id;
+    document.getElementById('stockProductName').textContent = name;
+    document.getElementById('stockQty').value = '';
+    document.getElementById('stockModal').style.display = 'flex';
+}
+function stockOut(id, name, current) {
+    document.getElementById('stockModalTitle').textContent = 'Stock Out';
+    document.getElementById('stockType').value = 'out';
+    document.getElementById('stockProductId').value = id;
+    document.getElementById('stockProductName').textContent = name + ` (Current: ${current})`;
+    document.getElementById('stockQty').value = '';
+    document.getElementById('stockModal').style.display = 'flex';
+}
+function stockAdjust(id, name, current) {
+    document.getElementById('stockModalTitle').textContent = 'Set Stock';
+    document.getElementById('stockType').value = 'adjust';
+    document.getElementById('stockProductId').value = id;
+    document.getElementById('stockProductName').textContent = name + ` (Current: ${current})`;
+    document.getElementById('stockQty').value = current;
+    document.getElementById('stockModal').style.display = 'flex';
+}
+function closeStockModal() { document.getElementById('stockModal').style.display = 'none'; }
+document.getElementById('stockForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const data = {
+        product_id: parseInt(document.getElementById('stockProductId').value),
+        type: document.getElementById('stockType').value,
+        quantity: parseInt(document.getElementById('stockQty').value),
+        note: document.getElementById('stockNote').value,
+    };
+    fetch('/admin/stock/adjust', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
+        .then(r=>r.json()).then(res => { if(res.success) location.reload(); else alert(res.error); });
+});
+</script>
+{% endblock %}

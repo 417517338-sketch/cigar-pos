@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CigarPOS</string>
+    <string name="title_activity_main">CigarPOS</string>
+    <string name="package_name">com.cigarlounge.pos</string>
+    <string name="custom_url_scheme">com.cigarlounge.pos</string>
+</resources>

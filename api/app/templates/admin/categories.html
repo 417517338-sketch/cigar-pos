@@ -1,0 +1,132 @@
+{% extends "admin/base.html" %}
+{% block title %}Categories{% endblock %}
+{% block content %}
+<div class="page-title">
+    分类管理
+    <button class="btn btn-primary" onclick="openCatModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        添加分类
+    </button>
+</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr><th style="width:80px">排序</th><th>名称 (中文)</th><th>名称 (English)</th><th>名称 (Русский)</th><th>产品数</th><th>状态</th><th style="width:100px">操作</th></tr>
+        </thead>
+        <tbody>
+        {% for cat in categories %}
+            <tr>
+                <td class="font-mono text-muted">{{ cat.sort_order }}</td>
+                <td><strong>{{ cat.name_zh }}</strong></td>
+                <td class="text-muted">{{ cat.name_en or '-' }}</td>
+                <td class="text-muted">{{ cat.name_ru or '-' }}</td>
+                <td>
+                    {% if cat.products %}
+                    <span class="badge badge-success">{{ cat.products|length }}</span>
+                    {% else %}
+                    <span class="text-dim">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if cat.status == 'active' %}
+                    <span class="badge badge-success">激活</span>
+                    {% else %}
+                    <span class="badge badge-error">停用</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn-icon" onclick="editCat({{ cat.id }})" title="编辑">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn-icon text-danger" onclick="deleteCat({{ cat.id }})" title="删除">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                </td>
+            </tr>
+        {% endfor %}
+        {% if not categories %}
+            <tr><td colspan="7" class="text-muted" style="text-align:center;padding:40px">暂无分类，点击右上角添加</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Category Modal -->
+<div class="modal" id="catModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <span id="catModalTitle">添加分类</span>
+            <button class="modal-close" onclick="closeCatModal()">&times;</button>
+        </div>
+        <form id="catForm" onsubmit="saveCat(event)">
+            <input type="hidden" id="catId" name="id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">名称 (中文) *</label>
+                    <input type="text" class="form-control" id="cat_name_zh" name="name_zh" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">名称 (English)</label>
+                    <input type="text" class="form-control" id="cat_name_en" name="name_en">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">名称 (Русский)</label>
+                    <input type="text" class="form-control" id="cat_name_ru" name="name_ru">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">排序</label>
+                    <input type="number" class="form-control" id="cat_sort_order" name="sort_order" value="0" min="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCatModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const ALL_CATS = {{ categories | tojson }};
+
+function openCatModal(id) {
+    document.getElementById('catId').value = id || '';
+    document.getElementById('catModalTitle').textContent = id ? '编辑分类' : '添加分类';
+    if (!id) document.getElementById('catForm').reset();
+    if (id) {
+        const c = ALL_CATS.find(x => x.id === id);
+        if (c) {
+            ['name_zh','name_en','name_ru','sort_order'].forEach(k => {
+                const el = document.getElementById('cat_' + k);
+                if (el) el.value = (c[k] ?? '').toString();
+            });
+        }
+    }
+    document.getElementById('catModal').classList.add('open');
+}
+function closeCatModal() { document.getElementById('catModal').classList.remove('open'); }
+function editCat(id) { openCatModal(id); }
+
+async function saveCat(e) {
+    e.preventDefault();
+    const data = {
+        name_zh: f('cat_name_zh'), name_en: f('cat_name_en'), name_ru: f('cat_name_ru'),
+        sort_order: parseInt(f('cat_sort_order')) || 0
+    };
+    const id = document.getElementById('catId').value;
+    if (id) data.id = parseInt(id);
+    const r = await fetch('/admin/categories/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const res = await r.json();
+    if (res.success) location.reload(); else alert(res.error || '保存失败');
+}
+
+async function deleteCat(id) {
+    if (!confirm('确认删除此分类？')) return;
+    await fetch('/admin/categories/' + id, { method:'DELETE' });
+    location.reload();
+}
+
+function f(id) { return document.getElementById(id).value; }
+</script>
+{% endblock %}

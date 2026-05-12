@@ -1,0 +1,234 @@
+/* =============================================
+   雪茄房 POS · 全局样式 · 深色奢华主题
+   ============================================= */
+
+:root {
+  --bg-root:      #0F0D0B;
+  --bg-sidebar:   #1A1612;
+  --bg-card:      #1E1A16;
+  --bg-input:     #2A2420;
+  --gold:         #C9A84C;
+  --gold-dim:     #8B7355;
+  --cream:        #E8DCC8;
+  --cream-dim:    #9B8B75;
+  --danger:       #C94A4A;
+  --success:      #4A9C6D;
+  --border:       rgba(201,168,76,0.15);
+  --shadow:       0 4px 24px rgba(0,0,0,0.5);
+  --radius:       12px;
+  --radius-sm:    8px;
+  --font:         system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-root);
+  color: var(--cream);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Typography ── */
+h1,h2,h3 { color: var(--cream); font-weight: 600; }
+.gold-text { color: var(--gold); }
+.dim-text  { color: var(--cream-dim); font-size: 0.85em; }
+.mono       { font-family: var(--font-mono); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 80ms, box-shadow 80ms, background 120ms;
+  -webkit-user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-gold {
+  background: var(--gold);
+  color: #0F0D0B;
+}
+.btn-gold:hover { background: #D4B55A; }
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+}
+.btn-outline:hover { background: rgba(201,168,76,0.1); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover { background: #D45555; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--cream-dim);
+  border: 1.5px solid transparent;
+}
+.btn-ghost:hover { border-color: var(--border); color: var(--cream); }
+
+.btn-lg { padding: 14px 28px; font-size: 16px; border-radius: var(--radius); }
+.btn-full { width: 100%; }
+.btn-icon { padding: 10px; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+/* ── Inputs ── */
+input, select {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--cream);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 150ms;
+}
+input:focus, select:focus { border-color: var(--gold); }
+input::placeholder { color: var(--cream-dim); }
+
+/* ── Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: #0F0D0B;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-danger { background: var(--danger); color: #fff; }
+.badge-success { background: var(--success); color: #fff; }
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(201,168,76,0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.fade-in  { animation: fadeIn 250ms ease forwards; }
+.slide-up { animation: slideUp 300ms cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* ── Toast / Modal ── */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 24px;
+  font-size: 14px;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+.toast-success { border-color: var(--success); color: var(--success); }
+.toast-error   { border-color: var(--danger);  color: var(--danger); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow);
+}
+
+/* ── Utility ── */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.p-4 { padding: 16px; }
+.px-4 { padding-left: 16px; padding-right: 16px; }
+.py-2 { padding-top: 8px; padding-bottom: 8px; }
+.mt-2 { margin-top: 8px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.w-full { width: 100%; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

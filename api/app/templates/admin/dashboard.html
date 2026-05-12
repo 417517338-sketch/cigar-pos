@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-title">Dashboard</div>
+
+<!-- Key Metrics -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">今日营收</div>
+        <div class="metric-value gold">¥{{ "%.2f"|format(today_sales) }}</div>
+        <div class="metric-sub">{{ today_orders }} 单</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">本月营收</div>
+        <div class="metric-value">¥{{ "%.2f"|format(month_sales) }}</div>
+        <div class="metric-sub">{{ month_orders }} 单</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">毛利润</div>
+        <div class="metric-value" style="color:var(--success)">¥{{ "%.2f"|format(month_profit) }}</div>
+        <div class="metric-sub">本月</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">净利润</div>
+        <div class="metric-value" style="color:var(--success)">¥{{ "%.2f"|format(net_profit) }}</div>
+        <div class="metric-sub">扣除运营成本</div>
+    </div>
+</div>
+
+<!-- Low Stock Alert -->
+{% if low_stock_products %}
+<div class="card" style="margin-top:20px">
+    <div class="card-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        库存预警
+    </div>
+    <table class="table">
+        <thead><tr><th>产品</th><th>分类</th><th>库存</th><th>预警线</th></tr></thead>
+        <tbody>
+        {% for p in low_stock_products %}
+            <tr>
+                <td>{{ p.name_zh }}</td>
+                <td>{{ p.category.name_zh if p.category else '-' }}</td>
+                <td><span style="color:var(--danger);font-weight:600">{{ p.stock }}</span></td>
+                <td>{{ p.stock_alert }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Recent Orders -->
+<div class="card" style="margin-top:20px">
+    <div class="card-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        最近订单
+    </div>
+    <table class="table">
+        <thead><tr><th>#</th><th>金额</th><th>利润</th><th>状态</th><th>时间</th></tr></thead>
+        <tbody>
+        {% for o in recent_orders %}
+            <tr>
+                <td class="font-mono">{{ o.id }}</td>
+                <td>¥{{ "%.2f"|format(o.total) }}</td>
+                <td>¥{{ "%.2f"|format(o.profit) }}</td>
+                <td>
+                    {% if o.payment_status == 'paid' %}
+                    <span class="badge badge-success">已支付</span>
+                    {% elif o.payment_status == 'pending' %}
+                    <span class="badge badge-warning">待支付</span>
+                    {% else %}
+                    <span class="badge badge-error">已取消</span>
+                    {% endif %}
+                </td>
+                <td>{{ o.created_at.strftime('%m-%d %H:%M') }}</td>
+            </tr>
+        {% endfor %}
+        {% if not recent_orders %}
+            <tr><td colspan="5" class="text-muted" style="text-align:center;padding:20px">暂无订单</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

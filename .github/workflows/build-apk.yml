@@ -1,0 +1,49 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          working-directory: webapp
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: webapp
+
+      - name: Build web app
+        run: npm run build
+        working-directory: webapp
+
+      - name: Add Capacitor
+        run: npx cap add android
+        working-directory: webapp
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+        working-directory: webapp
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cigar-pos-apk
+          path: android/app/build/outputs/apk/debug/*.apk
