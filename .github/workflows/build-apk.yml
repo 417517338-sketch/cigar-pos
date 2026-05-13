@@ -13,15 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Android SDK
+      - name: Setup Java
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq openjdk-17-jdk unzip
+          java -version 2>&1
+
+      - name: Setup Android SDK
+        run: |
           export ANDROID_HOME=/opt/android-sdk
           export ANDROID_SDK_ROOT=/opt/android-sdk
           mkdir -p $ANDROID_HOME/cmdline-tools
@@ -33,6 +32,17 @@ jobs:
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_ENV
+
+      - name: Download Gradle
+        run: |
+          export GRADLE_HOME=/opt/gradle
+          mkdir -p $GRADLE_HOME
+          curl -sL -o /tmp/gradle-8.2.zip "https://mirrors.aliyun.com/gradle/gradle-8.2-bin.zip"
+          unzip -q /tmp/gradle-8.2.zip -d $GRADLE_HOME
+          echo "GRADLE_HOME=$GRADLE_HOME" >> $GITHUB_ENV
+          echo "PATH=$PATH:$GRADLE_HOME/gradle-8.2/bin" >> $GITHUB_ENV
+          gradle --version
 
       - name: Install web deps and build
         run: |
@@ -44,14 +54,14 @@ jobs:
         run: |
           mkdir -p android/app/src/main/assets/public
           cp -r dist/* android/app/src/main/assets/public/
-          echo "=== assets ===" && ls android/app/src/main/assets/public/
+          ls android/app/src/main/assets/public/
         working-directory: webapp
 
       - name: Build APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1
+          export ANDROID_HOME=/opt/android-sdk
+          export ANDROID_SDK_ROOT=/opt/android-sdk
+          gradle assembleDebug --no-daemon -p android 2>&1
         working-directory: webapp
 
       - name: Upload APK
