@@ -13,12 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Java and Gradle
+      - name: Install Java 17
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq openjdk-17-jdk gradle unzip
+          wget -q https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.11_9.tar.gz -O /tmp/jdk17.tar.gz
+          mkdir -p /opt/jdk
+          tar -xzf /tmp/jdk17.tar.gz -C /opt/jdk
+          echo "JAVA_HOME=/opt/jdk/jdk-17.0.11+9" >> $GITHUB_ENV
+          echo "PATH=/opt/jdk/jdk-17.0.11+9/bin:$PATH" >> $GITHUB_ENV
           java -version 2>&1 | head -1
-          gradle --version | head -3
 
       - name: Setup Android SDK
         run: |
@@ -26,13 +28,20 @@ jobs:
           export ANDROID_SDK_ROOT=/opt/android-sdk
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd /tmp
-          curl -sL -o cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" -O cmdline-tools.zip
           unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
           mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+      - name: Setup Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /opt
+          echo "PATH=/opt/gradle-8.2/bin:$PATH" >> $GITHUB_ENV
+          /opt/gradle-8.2/bin/gradle --version | head -3
 
       - name: Install web deps and build
         run: |
@@ -49,8 +58,14 @@ jobs:
 
       - name: Build APK
         run: |
-          gradle assembleDebug --no-daemon -p android 2>&1
+          /opt/gradle-8.2/bin/gradle assembleDebug --no-daemon -p android 2>&1 | tee /tmp/gradle_output.txt
+          echo "---GRADLE EXIT CODE: $?"
         working-directory: webapp
+
+      - name: Show Gradle output on failure
+        if: failure()
+        run: |
+          echo "=== GRADLE OUTPUT ===" && cat /tmp/gradle_output.txt | tail -50
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
