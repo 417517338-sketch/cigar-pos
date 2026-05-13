@@ -29,26 +29,26 @@ jobs:
         run: npm run build
         working-directory: webapp
 
-      - name: Add Capacitor
-        run: |
-          echo "=== Node version ===" && node --version
-          echo "=== npm version ===" && npm --version
-          echo "=== Adding Capacitor ===" && npx cap add android 2>&1
-        working-directory: webapp
-
       - name: Sync Capacitor
-        run: npx cap sync android 2>&1
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
         working-directory: webapp
 
       - name: Build APK
         run: |
+          export ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk}
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -20
+          ./gradlew assembleDebug --no-daemon 2>&1 | tail -30
+        working-directory: webapp
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         if: success()
         with:
           name: cigar-pos-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: webapp/android/app/build/outputs/apk/debug/*.apk
