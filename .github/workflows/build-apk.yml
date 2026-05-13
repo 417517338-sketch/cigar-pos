@@ -34,28 +34,17 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Remove old android dir
-        run: rm -rf android
+      - name: Install web deps and build
+        run: |
+          npm install
+          npm run build
         working-directory: webapp
 
-      - name: Install web dependencies
-        run: npm install
-        working-directory: webapp
-
-      - name: Build web app
-        run: npm run build
-        working-directory: webapp
-
-      - name: Add Capacitor platform
-        run: npx cap add android 2>&1
-        working-directory: webapp
-
-      - name: Sync Capacitor
-        run: npx cap sync android 2>&1
-        working-directory: webapp
-
-      - name: Verify assets
-        run: ls android/app/src/main/assets/public/ && echo "=== OK ==="
+      - name: Copy web assets to Android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -r dist/* android/app/src/main/assets/public/
+          echo "=== assets ===" && ls android/app/src/main/assets/public/
         working-directory: webapp
 
       - name: Build APK
