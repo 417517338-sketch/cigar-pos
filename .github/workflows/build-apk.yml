@@ -46,14 +46,21 @@ jobs:
         run: |
           mkdir -p android/app/src/main/assets/public
           cp -r dist/* android/app/src/main/assets/public/
-          echo "=== assets copied ===" && ls android/app/src/main/assets/public/
+          echo "=== dist ===" && ls dist/
+          echo "=== assets ===" && ls android/app/src/main/assets/public/
         working-directory: webapp
 
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -20
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+        working-directory: webapp
+
+      - name: Check APK output
+        run: |
+          echo "=== build outputs ===" && find . -name "*.apk" 2>/dev/null
+          ls -la android/app/build/outputs/apk/debug/ 2>/dev/null || echo "no apk dir"
         working-directory: webapp
 
       - name: Upload APK
@@ -61,4 +68,4 @@ jobs:
         if: success()
         with:
           name: cigar-pos-apk
-          path: webapp/android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
