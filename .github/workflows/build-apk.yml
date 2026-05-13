@@ -26,24 +26,29 @@ jobs:
         working-directory: webapp
 
       - name: Build web app
-        run: npm run build
+        run: |
+          npm run build
+          echo "=== dist contents ===" && ls -la dist/
         working-directory: webapp
 
       - name: Sync Capacitor
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync android
+          echo "=== android exists? ===" && ls -d android && echo "yes" || echo "no"
+          npx cap sync android 2>&1
+          echo "=== sync done ===" && ls android/app/src/main/assets/public/ 2>/dev/null | head -5
         working-directory: webapp
 
       - name: Build APK
+        env:
+          ANDROID_HOME: /opt/android-sdk
+          ANDROID_SDK_ROOT: /opt/android-sdk
         run: |
-          export ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk}
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          echo "=== java version ===" && java -version 2>&1
+          echo "=== ANDROID_HOME ===" && echo $ANDROID_HOME
+          echo "=== gradle files ===" && ls android/gradle* android/build.gradle 2>/dev/null
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -30
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -50
         working-directory: webapp
 
       - name: Upload APK
